@@ -78,58 +78,141 @@ st.pyplot(fig)
 
 # Order Items
 st.subheader("Order Items")
-sum_order_df = all_df.groupby("product_category_name_english")["product_id"].count().reset_index()
-sum_order_df = sum_order_df.rename(columns={"product_id": "products"})
-sum_order_df = sum_order_df.sort_values(by="products", ascending=False)
-sum_order_df = sum_order_df.head(10)
+col1, col2 = st.columns(2)
 
-sum_order_df.head()
+with col1:
+    total_items = sum_order_items_df["products"].sum()
+    st.markdown(f"Total Items: **{total_items}**")
 
-fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(24, 6))
+with col2:
+    avg_items = sum_order_items_df["products"].mean()
+    st.markdown(f"Average Items: **{avg_items}**")
 
-colors = ["#72BCD4", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3"]
+fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(45, 25))
 
-sns.barplot(x="products", y="product_category_name_english", data=sum_order_df.head(5), palette=colors, ax=ax[0])
+sns.barplot(x="products", y="product_category_name_english", data=sum_order_items_df.head(5), palette="viridis", ax=ax[0])
 ax[0].set_ylabel(None)
-ax[0].set_xlabel(None)
-ax[0].set_title("Best Selling Product", loc="center", fontsize=18)
-ax[0].tick_params(axis ='y', labelsize=15)
+ax[0].set_xlabel("Number of Sales", fontsize=80)
+ax[0].set_title("Best Selling products", loc="center", fontsize=90)
+ax[0].tick_params(axis ='y', labelsize=55)
+ax[0].tick_params(axis ='x', labelsize=50)
 
-sns.barplot(x="products", y="product_category_name_english", data=sum_order_df.sort_values(by="products", ascending=True).head(5), palette=colors, ax=ax[1])
+sns.barplot(x="products", y="product_category_name_english", data=sum_order_items_df.sort_values(by="products", ascending=True).head(5), palette="viridis", ax=ax[1])
 ax[1].set_ylabel(None)
-ax[1].set_xlabel(None)
+ax[1].set_xlabel("Number of Sales", fontsize=80)
 ax[1].invert_xaxis()
 ax[1].yaxis.set_label_position("right")
 ax[1].yaxis.tick_right()
-ax[1].set_title("Worst Selling Product", loc="center", fontsize=18)
-ax[1].tick_params(axis='y', labelsize=15)
-
-plt.suptitle("Best and Worst Selling Product by Number of Sales", fontsize=20)
+ax[1].set_title("Worst selling products", loc="center", fontsize=90)
+ax[1].tick_params(axis='y', labelsize=55)
+ax[1].tick_params(axis='x', labelsize=50)
 
 st.pyplot(fig)
 
 # Review Score
 st.subheader("Review Score")
+
+# Convert start_date and end_date to datetime objects
+start_date = pd.to_datetime(start_date)
+end_date = pd.to_datetime(end_date)
+
+# Convert 'review_creation_date' column to datetime if not already
 all_df['review_creation_date'] = pd.to_datetime(all_df['review_creation_date'], format='ISO8601')
 
-# Filter data for the last 8 months
-last_six_months_data = all_df[all_df['review_creation_date'] >= all_df['review_creation_date'].max() - pd.DateOffset(months=7)]
+# Filter data based on the selected date range
+review_data = all_df[
+    (all_df['review_creation_date'] >= start_date) & 
+    (all_df['review_creation_date'] <= end_date)
+]
+
+col1, col2 = st.columns(2)
+
+with col1:
+    total_reviews = review_data.shape[0]
+    st.markdown(f"Total Reviews: **{total_reviews}**")
+
+with col2:
+    avg_review = review_data['review_score'].mean()
+    st.markdown(f"Average Review Score: **{avg_review:.2f}**")
+
+fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(45, 25))
 
 # Create a bar plot for review scores by month
-fig = plt.figure(figsize=(10, 5))
-sns.countplot(x=last_six_months_data['review_creation_date'].dt.month,
-              hue=last_six_months_data['review_score'],
+fig_review = plt.figure(figsize=(10, 5))
+sns.countplot(x=review_data['review_creation_date'].dt.month,
+              hue=review_data['review_score'],
               palette="viridis")
 
-plt.title("Customer Satisfaction Over the Last 6 Months", fontsize=15)
+plt.title("Customer Satisfaction", fontsize=15)
 plt.xlabel("Month")
 plt.ylabel("Count of Reviews")
 plt.legend(title="Review Score", loc='upper right', bbox_to_anchor=(1.2, 1))
 
-months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
-plt.xticks(range(0, 8), months)
+months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Des']
+plt.xticks(range(0, 12), months)
 
-st.pyplot(fig)
+st.pyplot(fig_review)
+
+# Order Approved
+st.subheader("Orders Approved")
+
+all_df = all_df[(all_df['order_approved_at'] >= start_date) & (all_df['order_approved_at'] <= end_date)]
+
+monthly_order = all_df.resample(rule='M', on='order_approved_at').agg({
+    "order_id": "size",
+})
+monthly_order.index = monthly_order.index.strftime('%B')
+monthly_order = monthly_order.reset_index()
+monthly_order.rename(columns={
+    "order_id": "order_count",
+}, inplace=True)
+monthly_order = monthly_order.sort_values('order_count').drop_duplicates('order_approved_at', keep='last')
+month_mapping = {
+    "January": 1,
+    "February": 2,
+    "March": 3,
+    "April": 4,
+    "May": 5,
+    "June": 6,
+    "July": 7,
+    "August": 8,
+    "September": 9,
+    "October": 10,
+    "November": 11,
+    "December": 12
+}
+
+monthly_order["month_numeric"] = monthly_order["order_approved_at"].map(month_mapping)
+monthly_order = monthly_order.sort_values("month_numeric")
+monthly_order = monthly_order.drop("month_numeric", axis=1)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    # Calculate total orders and average orders per month
+    total_orders = all_df.shape[0]
+    st.markdown(f"Total Orders Approved:\n{total_orders}")
+
+with col2:
+    # Average orders per month
+    avg_orders_per_month = all_df.resample(rule='M', on='order_approved_at').size().mean()
+    st.markdown(f"Average Orders per Month:\n{avg_orders_per_month}")
+
+fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(45, 25))
+
+plt.figure(figsize=(10, 5))
+plt.plot(
+    monthly_order["order_approved_at"],
+    monthly_order["order_count"],
+    marker='o',
+    linewidth=2,
+    color="#72BCD4"
+)
+plt.title("Number of Orders Approved per Month", loc="center", fontsize=20)
+plt.xticks(fontsize=10, rotation=45)
+plt.yticks(fontsize=10)
+
+st.pyplot()
 
 st.caption('Copyright (C) Regina Ayumi Ulayyaa 2023')
 
