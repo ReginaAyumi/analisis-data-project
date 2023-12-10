@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import seaborn as sns
 import streamlit as st
-import urllib
 from func import DataAnalyzer
 from babel.numbers import format_currency
 
@@ -26,7 +25,7 @@ max_date = all_df["order_approved_at"].max()
 # Sidebar
 with st.sidebar:
     # Title
-    st.title("Hanif Al Irsyad")
+    st.title("Regina Ayumi Ulayyaa")
 
     # Date Range
     start_date, end_date = st.date_input(

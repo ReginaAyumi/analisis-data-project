@@ -3,5 +3,4 @@ pandas
 Babel
 matplotlib
 seaborn
-urllib
-zipfile
+
